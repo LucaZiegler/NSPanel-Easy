@@ -1,0 +1,8 @@
+// Touch press: report coordinates as a component touch event
+// 0x65 <x/2> <y/2> 0x01 FF FF FF  (ESPHome on_touch: page_id = x/2, component_id = y/2, touch_event = true)
+sys0=tch0/2
+sys1=tch1/2
+printh 65
+prints sys0,1
+prints sys1,1
+printh 01 ff ff ff

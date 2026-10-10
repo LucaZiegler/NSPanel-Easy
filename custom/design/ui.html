@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>NSPanel Custom UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<!--
+  Single source of truth for the NSPanel custom UI.
+
+  URL parameters:
+    ?page=<id>&variant=<v>&mode=export   one 480x320 layer, dynamic text hidden (for picture export)
+    ?page=<id>&variant=<v>&mode=preview  one screen with sample values
+    ?page=ring&t=<target|off>            thermostat ring frame (thermo card only)
+    ?page=wx                             weather icon sprite
+    (no page)                            gallery of all screens with sample values
+
+  Markup contract (read by custom/tools/build_assets.py via --dump-dom):
+    data-text="id"  data-font="0-6" data-color="#rrggbb" data-bg="#rrggbb" data-align="l|c|r"
+                    dynamic text drawn by the panel with xstr (sta=1, solid background)
+    data-hit="id"   touch area
+    data-region="id" area swapped between variants with xpic
+    data-fill="id" data-color="#rrggbb" data-bg="#rrggbb"   bar drawn with fill
+
+  Panel fonts (Sarasa, ids are the Nextion font ids):
+    0 = Sarasa 16, 1 = Sarasa 18, 2 = Sarasa 22, 3 = Sarasa 36, 4 = Sarasa 48 limited, 5 = Sarasa 72 limited, 6 = Sarasa 112 time
+  EU panel: only x 0..449 is visible.
+-->
+<style>
+  :root {
+    --bg: #0d1117;
+    --nav: #0a0e14;
+    --card: #19212e;
+    --card-hi: #232d3d;
+    --line: #283244;
+    --text: #e8edf4;
+    --text-2: #9aa7b8;
+    --text-3: #627084;
+    --amber: #ffb547;
+    --amber-tile: #33270f;
+    --amber-line: #6b4d1e;
+    --blue: #5aa9ff;
+    --blue-tile: #12263c;
+    --blue-line: #24507f;
+    --green: #4ade80;
+    --green-bg: #12301f;
+    --red: #ff6b6b;
+    --red-bg: #3a1618;
+    --heat: #ff8a3d;
+    --heat-tile: #3a2412;
+    --heat-line: #7a4720;
+    --font: "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #05070a; color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  body.gallery { padding: 24px; display: flex; flex-wrap: wrap; gap: 22px; }
+  body.single { overflow: hidden; }
+  .lbl { font: 600 13px var(--font); color: var(--text-2); margin-bottom: 6px; }
+  .frame { display: flex; flex-direction: column; }
+  .screen { width: 480px; height: 320px; position: relative; overflow: hidden; background: var(--bg); }
+  body.single .frame { display: none; }
+  body.single .frame.show { display: block; }
+  body.single .frame.show .lbl { display: none; }
+  .abs { position: absolute; }
+  .card { position: absolute; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* dynamic text: shown in preview, hidden in export */
+  [data-text] { position: absolute; white-space: nowrap; overflow: hidden; display: flex; align-items: center; font-weight: 400; }
+  [data-align="c"] { justify-content: center; }
+  [data-align="r"] { justify-content: flex-end; }
+  [data-font="0"] { font-size: 14px; }
+  [data-font="1"] { font-size: 16px; }
+  [data-font="2"] { font-size: 19px; }
+  [data-font="3"] { font-size: 31px; }
+  [data-font="4"] { font-size: 42px; }
+  [data-font="5"] { font-size: 62px; letter-spacing: -1px; }
+  [data-font="6"] { font-size: 98px; letter-spacing: -2px; }
+  body.export [data-text] { visibility: hidden; }
+  body.export [data-fill] i { display: none; }
+  [data-fill] { position: absolute; }
+  [data-fill] i { display: block; height: 100%; }
+
+  /* top bar */
+  .title { position: absolute; left: 16px; top: 9px; height: 26px; font: 700 18px/26px var(--font); }
+
+  /* nav */
+  .nav { position: absolute; left: 0; top: 262px; width: 480px; height: 58px; background: var(--nav); border-top: 1px solid var(--line); }
+  .nav .tab { position: absolute; top: 0; width: 90px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--text-3); font: 600 11px var(--font); }
+  .nav .tab svg { width: 22px; height: 22px; }
+  .nav .tab.on { color: var(--amber); }
+  .nav .tab.on::before { content: ""; position: absolute; top: -1px; left: 28px; width: 34px; height: 3px; border-radius: 0 0 3px 3px; background: var(--amber); }
+
+  /* light tiles */
+  .tile .ic { position: absolute; left: 12px; top: 12px; width: 34px; height: 34px; border-radius: 11px; background: var(--card-hi); display: grid; place-items: center; color: var(--text-2); }
+  .tile .ic svg { width: 20px; height: 20px; }
+  .tile .nm { position: absolute; left: 12px; top: 51px; font: 700 15px/18px var(--font); }
+  .tile.on { background: var(--amber-tile); border-color: var(--amber-line); }
+  .tile.on .ic { background: var(--amber); color: #2a1a05; }
+  .tile .track { position: absolute; left: 12px; right: 12px; top: 92px; height: 4px; border-radius: 2px; background: #1c150a; display: none; }
+  .tile.on .track { display: block; }
+  .pager { position: absolute; top: 20px; left: 205px; display: flex; gap: 6px; }
+  .pager i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  .pager i.on { background: var(--text-2); }
+
+  /* chips + buttons */
+  .chip { position: absolute; height: 24px; border-radius: 12px; font: 700 12px/24px var(--font); text-align: center; background: var(--green-bg); color: var(--green); }
+  .chip.bad { background: var(--red-bg); color: var(--red); }
+  .qbtn { display: flex; align-items: center; padding-left: 16px; font: 700 13px var(--font); }
+  .qbtn .sw { position: absolute; left: 7px; top: 16px; width: 4px; height: 22px; border-radius: 2px; }
+  .qbtn.hl { border-color: var(--amber); background: #2a2112; }
+
+  .row .rl { position: absolute; left: 12px; top: 0; height: 100%; display: flex; align-items: center; gap: 9px; font: 700 13px var(--font); }
+  .row .rl svg { width: 18px; height: 18px; color: var(--text-2); }
+  .preset { display: grid; place-items: center; font: 700 12px var(--font); color: var(--text-2); }
+  .preset.on { background: var(--heat-tile); border-color: var(--heat-line); color: var(--heat); }
+
+  .cbtn { position: absolute; border-radius: 50%; background: var(--card-hi); display: grid; place-items: center; color: var(--text); }
+  .cbtn svg { width: 22px; height: 22px; }
+  .cbtn.main { background: var(--blue); color: #061527; }
+  .side { display: flex; align-items: center; gap: 9px; padding-left: 12px; font: 700 13px var(--font); }
+  .side svg { width: 18px; height: 18px; color: var(--text-2); }
+  .side.on { background: var(--blue-tile); border-color: var(--blue-line); color: var(--blue); }
+  .side.on svg { color: var(--blue); }
+
+  .big .bic { position: absolute; left: 14px; top: 25px; width: 50px; height: 50px; border-radius: 15px; display: grid; place-items: center; }
+  .big .bic svg { width: 27px; height: 27px; }
+  .big .n { position: absolute; left: 76px; top: 24px; font: 700 16px var(--font); }
+  .big .s { position: absolute; left: 76px; top: 46px; right: 10px; font: 600 12px/16px var(--font); color: var(--text-2); }
+  .tone-amber { background: #3a2a12; color: var(--amber); }
+  .tone-green { background: var(--green-bg); color: var(--green); }
+  .tone-blue { background: var(--blue-tile); color: var(--blue); }
+  .tone-red { background: var(--red-bg); color: var(--red); }
+  .big.alert { border-color: #6b2328; background: #241417; }
+  .big.active { border-color: var(--blue-line); background: var(--blue-tile); }
+
+  .scene { position: absolute; border-radius: 14px; color: #fff; }
+  .scene .n { position: absolute; left: 12px; bottom: 26px; font: 700 15px var(--font); }
+  .scene .s { position: absolute; left: 12px; bottom: 11px; font: 600 11px var(--font); opacity: .78; }
+
+  .modal { position: absolute; left: 40px; top: 32px; width: 370px; height: 252px; border-radius: 22px; background: #1f1517; border: 1px solid #5c2328; }
+  .modal .mi { position: absolute; left: 157px; top: 18px; width: 56px; height: 56px; border-radius: 50%; background: var(--red-bg); display: grid; place-items: center; color: var(--red); }
+  .modal .mi svg { width: 30px; height: 30px; }
+  .mbtn { position: absolute; height: 44px; border-radius: 14px; background: #2c1d20; }
+  .mbtn.p { background: var(--red); }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+    <symbol id="i-therm" viewBox="0 0 24 24"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 9v7"/></symbol>
+    <symbol id="i-tv" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></symbol>
+    <symbol id="i-window" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M12 3v18"/><path d="M4 12h16"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-shield-alert" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M12 8v5"/><path d="M12 16.5v.01"/></symbol>
+    <symbol id="i-door" viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><circle cx="15" cy="12" r="1"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="3.2"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M18 5L8 12l10 7z"/><path d="M6 5v14"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M6 5l10 7-10 7z"/><path d="M18 5v14"/></symbol>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></symbol>
+    <symbol id="i-screen-off" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/><path d="M4 4l16 14"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5"/><path d="M12 18v.01"/></symbol>
+    <!-- weather -->
+    <symbol id="w-sunny" viewBox="0 0 48 48"><circle cx="24" cy="24" r="9" fill="#ffd166" stroke="none"/><path d="M24 5v6M24 37v6M5 24h6M37 24h6M10.6 10.6l4.2 4.2M33.2 33.2l4.2 4.2M10.6 37.4l4.2-4.2M33.2 14.8l4.2-4.2" stroke="#ffd166" stroke-width="3"/></symbol>
+    <symbol id="w-night" viewBox="0 0 48 48"><path d="M36 30A14 14 0 1 1 20 10a11 11 0 0 0 16 20z" fill="#c9d3df" stroke="none"/></symbol>
+    <symbol id="w-partly" viewBox="0 0 48 48"><circle cx="17" cy="17" r="7.5" fill="#ffd166" stroke="none"/><path d="M17 3.5v3M3.5 17h3M7.5 7.5l2 2M26.5 7.5l-2 2" stroke="#ffd166" stroke-width="3"/><path d="M17 40h18a7.5 7.5 0 0 0 .8-15A10.5 10.5 0 0 0 16 27a6.5 6.5 0 0 0 1 13z" fill="#c9d3df" stroke="none"/></symbol>
+    <symbol id="w-cloudy" viewBox="0 0 48 48"><path d="M13 38h22a8 8 0 0 0 .9-16A12 12 0 0 0 13 24.5 6.8 6.8 0 0 0 13 38z" fill="#9aa7b8" stroke="none"/></symbol>
+    <symbol id="w-rainy" viewBox="0 0 48 48"><path d="M13 30h22a8 8 0 0 0 .9-16A12 12 0 0 0 13 16.5 6.8 6.8 0 0 0 13 30z" fill="#9aa7b8" stroke="none"/><path d="M17 35l-2 5M25 35l-2 5M33 35l-2 5" stroke="#5aa9ff" stroke-width="3"/></symbol>
+    <symbol id="w-pouring" viewBox="0 0 48 48"><path d="M13 28h22a8 8 0 0 0 .9-16A12 12 0 0 0 13 14.5 6.8 6.8 0 0 0 13 28z" fill="#7c8a9c" stroke="none"/><path d="M15 32l-3 8M22 32l-3 8M29 32l-3 8M36 32l-3 8" stroke="#5aa9ff" stroke-width="3"/></symbol>
+    <symbol id="w-snowy" viewBox="0 0 48 48"><path d="M13 28h22a8 8 0 0 0 .9-16A12 12 0 0 0 13 14.5 6.8 6.8 0 0 0 13 28z" fill="#9aa7b8" stroke="none"/><circle cx="17" cy="36" r="2.4" fill="#e8edf4" stroke="none"/><circle cx="25" cy="40" r="2.4" fill="#e8edf4" stroke="none"/><circle cx="33" cy="36" r="2.4" fill="#e8edf4" stroke="none"/></symbol>
+    <symbol id="w-fog" viewBox="0 0 48 48"><path d="M8 18h32M5 26h38M10 34h28" stroke="#9aa7b8" stroke-width="4"/></symbol>
+    <symbol id="w-lightning" viewBox="0 0 48 48"><path d="M13 28h22a8 8 0 0 0 .9-16A12 12 0 0 0 13 14.5 6.8 6.8 0 0 0 13 28z" fill="#7c8a9c" stroke="none"/><path d="M25 26l-6 10h7l-4 9" stroke="#ffd166" stroke-width="3"/></symbol>
+    <symbol id="w-windy" viewBox="0 0 48 48"><path d="M6 18h24a5 5 0 1 0-5-5M6 26h32a5 5 0 1 1-5 5M6 34h16" stroke="#9aa7b8" stroke-width="3.5"/></symbol>
+    <symbol id="w-hail" viewBox="0 0 48 48"><path d="M13 28h22a8 8 0 0 0 .9-16A12 12 0 0 0 13 14.5 6.8 6.8 0 0 0 13 28z" fill="#9aa7b8" stroke="none"/><rect x="15" y="34" width="5" height="5" rx="1" fill="#e8edf4" stroke="none"/><rect x="28" y="36" width="5" height="5" rx="1" fill="#e8edf4" stroke="none"/></symbol>
+    <symbol id="w-unknown" viewBox="0 0 48 48"><circle cx="24" cy="24" r="14" stroke="#627084" stroke-width="3"/><path d="M19.5 20a4.5 4.5 0 1 1 6.5 4c-1.2.7-2 1.4-2 3" stroke="#627084" stroke-width="3"/><path d="M24 32v.01" stroke="#627084" stroke-width="3.5"/></symbol>
+  </defs>
+</svg>
+
+<template id="nav-tpl">
+  <div class="nav">
+    <div class="tab" data-k="home" style="left:0" data-hit="nav_home"><svg><use href="#i-home"/></svg>Start</div>
+    <div class="tab" data-k="licht" style="left:90px" data-hit="nav_licht"><svg><use href="#i-bulb"/></svg>Licht</div>
+    <div class="tab" data-k="bad" style="left:180px" data-hit="nav_bad"><svg><use href="#i-therm"/></svg>Bad</div>
+    <div class="tab" data-k="medien" style="left:270px" data-hit="nav_medien"><svg><use href="#i-tv"/></svg>Medien</div>
+    <div class="tab" data-k="wohnung" style="left:360px" data-hit="nav_wohnung"><svg><use href="#i-lock"/></svg>Wohnung</div>
+  </div>
+</template>
+
+<!-- ===================================================== HOME -->
+<div class="frame" data-page="home" data-variants="base,alt"><div class="lbl">01 · Start</div>
+<section class="screen" data-nav="home">
+  <div data-text="home_clock" data-font="5" data-color="#e8edf4" data-bg="#0d1117" data-align="l" style="left:14px;top:24px;width:230px;height:76px">15:24</div>
+  <div data-text="home_date" data-font="1" data-color="#9aa7b8" data-bg="#0d1117" data-align="l" style="left:18px;top:102px;width:228px;height:24px">Samstag, 10. Oktober</div>
+
+  <div class="card" style="left:252px;top:30px;width:186px;height:100px" data-hit="home_weather"></div>
+  <div class="abs" data-region="home_wx_icon" style="left:262px;top:44px;width:48px;height:48px"></div>
+  <div data-text="home_wx_temp" data-font="3" data-color="#e8edf4" data-bg="#19212e" data-align="l" style="left:318px;top:40px;width:112px;height:42px">14°</div>
+  <div data-text="home_wx_cond" data-font="0" data-color="#9aa7b8" data-bg="#19212e" data-align="l" style="left:264px;top:96px;width:166px;height:18px">Regen · gefühlt 13°</div>
+
+  <div class="card" style="left:12px;top:136px;width:232px;height:120px" data-hit="home_bath"></div>
+  <div class="abs" style="left:26px;top:146px;font:700 11px/16px var(--font);letter-spacing:1px;color:var(--text-2)">BAD</div>
+  <div data-text="home_bath_status" data-font="0" data-color="#ff8a3d" data-bg="#19212e" data-align="r" style="left:96px;top:144px;width:136px;height:20px">● heizt auf 22°</div>
+  <div data-text="home_bath_temp" data-font="3" data-color="#e8edf4" data-bg="#19212e" data-align="l" style="left:24px;top:168px;width:104px;height:44px">19,6°</div>
+  <div data-text="home_bath_hum" data-font="0" data-color="#9aa7b8" data-bg="#19212e" data-align="l" style="left:132px;top:172px;width:104px;height:18px">Feuchte 72 %</div>
+  <div data-text="home_bath_set" data-font="0" data-color="#9aa7b8" data-bg="#19212e" data-align="l" style="left:132px;top:192px;width:104px;height:18px">Soll 22,0°</div>
+  <div class="abs" data-region="home_chip_top" style="left:22px;top:222px;width:102px;height:24px"><div class="chip v-base" style="left:0;top:0;width:102px">Oben zu</div><div class="chip bad v-alt" style="left:0;top:0;width:102px">Oben offen</div></div>
+  <div class="abs" data-region="home_chip_bottom" style="left:130px;top:222px;width:102px;height:24px"><div class="chip v-base" style="left:0;top:0;width:102px">Unten zu</div><div class="chip bad v-alt" style="left:0;top:0;width:102px">Unten offen</div></div>
+
+  <div class="card qbtn" data-region="home_q1" data-hit="home_q1" style="left:252px;top:136px;width:90px;height:56px"><span class="sw" style="background:#ffd59a"></span>Normal</div>
+  <div class="card qbtn" data-region="home_q2" data-hit="home_q2" style="left:348px;top:136px;width:90px;height:56px"><span class="sw" style="background:#ff9f5a"></span>Gemütlich</div>
+  <div class="card qbtn" data-region="home_q3" data-hit="home_q3" style="left:252px;top:200px;width:90px;height:56px"><span class="sw" style="background:#7aa2ff"></span>TV</div>
+  <div class="card qbtn" data-region="home_q4" data-hit="home_q4" style="left:348px;top:200px;width:90px;height:56px"><span class="sw" style="background:#475569"></span>Alles aus</div>
+</section></div>
+
+<!-- ===================================================== LICHT (3 pages) -->
+<div class="frame" data-page="licht" data-variants="off,on"><div class="lbl">02 · Licht</div>
+<section class="screen" data-nav="licht" data-tiles="Wohnzimmer,Küche,Esszimmer,Bad,Schlafzimmer,Flur" data-pager="0" data-title="Licht" data-sample="0,80,0,0,0,100"></section></div>
+<div class="frame" data-page="licht2" data-variants="off,on"><div class="lbl">03 · Licht 2</div>
+<section class="screen" data-nav="licht" data-tiles="Balkon,PC,TV-Licht,Eingang,Schrank,Kühlschrank" data-pager="1" data-title="Licht" data-sample="100,100,60,0,0,100"></section></div>
+
+<div class="frame" data-page="szenen" data-variants="base"><div class="lbl">04 · Szenen</div>
+<section class="screen" data-nav="licht">
+  <div class="title">Szenen</div>
+  <div class="pager"><i></i><i></i><i class="on"></i></div>
+  <div data-text="top_meta" data-font="0" data-color="#9aa7b8" data-bg="#0d1117" data-align="r" style="left:300px;top:12px;width:136px;height:20px">15:24</div>
+  <div class="scene" data-region="scene_1" data-hit="scene_1" style="left:12px;top:44px;width:136px;height:102px;background:linear-gradient(150deg,#f6d38f,#b9822f)"><div class="n">Normal</div><div class="s">Küche/Wohnz.</div></div>
+  <div class="scene" data-region="scene_2" data-hit="scene_2" style="left:157px;top:44px;width:136px;height:102px;background:linear-gradient(150deg,#ff9f5a,#9c3d1c)"><div class="n">Gemütlich</div><div class="s">Küche/Wohnz.</div></div>
+  <div class="scene" data-region="scene_3" data-hit="scene_3" style="left:302px;top:44px;width:136px;height:102px;background:linear-gradient(150deg,#7aa2ff,#3a3f9c)"><div class="n">TV</div><div class="s">Küche/Wohnz.</div></div>
+  <div class="scene" data-region="scene_4" data-hit="scene_4" style="left:12px;top:154px;width:136px;height:102px;background:linear-gradient(150deg,#e8f1ff,#8fa8c7);color:#1a2230"><div class="n">Bad hell</div><div class="s">Bad</div></div>
+  <div class="scene" data-region="scene_5" data-hit="scene_5" style="left:157px;top:154px;width:136px;height:102px;background:linear-gradient(150deg,#c084fc,#5b2a86)"><div class="n">Bad abends</div><div class="s">Bad</div></div>
+  <div class="scene" data-region="scene_6" data-hit="scene_6" style="left:302px;top:154px;width:136px;height:102px;background:linear-gradient(150deg,#334155,#0f172a)"><div class="n">Schlafen</div><div class="s">Schlafzimmer</div></div>
+</section></div>
+
+<!-- ===================================================== BAD -->
+<div class="frame" data-page="bad" data-variants="base,on"><div class="lbl">05 · Bad</div>
+<section class="screen" data-nav="bad">
+  <div class="title">Bad</div>
+  <div data-text="top_meta" data-font="0" data-color="#9aa7b8" data-bg="#0d1117" data-align="r" style="left:240px;top:12px;width:196px;height:20px">Better Thermostat · 15:24</div>
+  <div class="thermo-slot" data-region="thermo" style="position:absolute;left:12px;top:44px;width:238px;height:212px"></div>
+  <div data-text="bad_mode" data-font="0" data-color="#ff8a3d" data-bg="#19212e" data-align="c" style="left:71px;top:92px;width:120px;height:18px">● HEIZT</div>
+  <div data-text="bad_target" data-font="4" data-color="#e8edf4" data-bg="#19212e" data-align="c" style="left:66px;top:112px;width:130px;height:54px">22,0°</div>
+  <div data-text="bad_current" data-font="0" data-color="#9aa7b8" data-bg="#19212e" data-align="c" style="left:61px;top:168px;width:140px;height:18px">Ist 19,6° · 72 %</div>
+  <div class="abs" data-hit="bad_minus" style="left:14px;top:196px;width:64px;height:60px"></div>
+  <div class="abs" data-hit="bad_plus" style="left:184px;top:196px;width:64px;height:60px"></div>
+
+  <div class="card row" style="left:258px;top:44px;width:180px;height:40px"><div class="rl"><svg><use href="#i-window"/></svg>Fenster oben</div></div>
+  <div data-text="bad_win_top" data-font="0" data-color="#4ade80" data-bg="#19212e" data-align="r" style="left:376px;top:54px;width:52px;height:20px">zu</div>
+  <div class="card row" style="left:258px;top:90px;width:180px;height:40px"><div class="rl"><svg><use href="#i-window"/></svg>Fenster unten</div></div>
+  <div data-text="bad_win_bottom" data-font="0" data-color="#4ade80" data-bg="#19212e" data-align="r" style="left:376px;top:100px;width:52px;height:20px">zu</div>
+
+  <div class="card preset" data-region="preset_comfort" data-hit="preset_comfort" style="left:258px;top:138px;width:56px;height:55px">Komfort</div>
+  <div class="card preset" data-region="preset_eco" data-hit="preset_eco" style="left:320px;top:138px;width:56px;height:55px">Eco</div>
+  <div class="card preset" data-region="preset_boost" data-hit="preset_boost" style="left:382px;top:138px;width:56px;height:55px">Boost</div>
+  <div class="card preset" data-region="preset_off" data-hit="preset_off" style="left:258px;top:201px;width:56px;height:55px">Aus</div>
+  <div class="card preset" data-region="preset_away" data-hit="preset_away" style="left:320px;top:201px;width:56px;height:55px">Abwes.</div>
+  <div class="card preset" data-region="preset_sleep" data-hit="preset_sleep" style="left:382px;top:201px;width:56px;height:55px">Nacht</div>
+</section></div>
+
+<!-- ===================================================== MEDIEN -->
+<div class="frame" data-page="medien" data-variants="base,on"><div class="lbl">06 · Medien</div>
+<section class="screen" data-nav="medien">
+  <div class="title">Fernseher</div>
+  <div data-text="top_meta" data-font="0" data-color="#9aa7b8" data-bg="#0d1117" data-align="r" style="left:270px;top:12px;width:166px;height:20px">LG OLED · 15:24</div>
+  <div class="card" style="left:12px;top:44px;width:284px;height:212px"></div>
+  <div data-text="media_source" data-font="0" data-color="#5aa9ff" data-bg="#19212e" data-align="l" style="left:26px;top:56px;width:256px;height:18px">YOUTUBE</div>
+  <div data-text="media_title1" data-font="2" data-color="#e8edf4" data-bg="#19212e" data-align="l" style="left:26px;top:78px;width:258px;height:26px">Lofi Hip Hop Radio – beats</div>
+  <div data-text="media_title2" data-font="2" data-color="#e8edf4" data-bg="#19212e" data-align="l" style="left:26px;top:104px;width:258px;height:26px">to relax/study to</div>
+  <div data-text="media_artist" data-font="0" data-color="#9aa7b8" data-bg="#19212e" data-align="l" style="left:26px;top:134px;width:258px;height:18px">Lofi Girl · Live</div>
+  <div class="cbtn" data-hit="media_prev" style="left:24px;top:190px;width:46px;height:46px"><svg><use href="#i-prev"/></svg></div>
+  <div class="abs" data-region="media_play" data-hit="media_play" style="left:78px;top:185px;width:56px;height:56px"><div class="cbtn main v-base" style="left:0;top:0;width:56px;height:56px"><svg><use href="#i-play"/></svg></div><div class="cbtn main v-on" style="left:0;top:0;width:56px;height:56px"><svg><use href="#i-pause"/></svg></div></div>
+  <div class="cbtn" data-hit="media_next" style="left:142px;top:190px;width:46px;height:46px"><svg><use href="#i-next"/></svg></div>
+  <svg class="abs" style="left:198px;top:203px;width:18px;height:18px;color:var(--text-2)"><use href="#i-speaker"/></svg>
+  <div class="abs" data-hit="media_volume" style="left:216px;top:190px;width:76px;height:46px"></div>
+  <div class="abs" style="left:222px;top:209px;width:42px;height:6px;border-radius:3px;background:var(--card-hi)"></div>
+  <div data-fill="media_volume" data-color="#5aa9ff" data-bg="#232d3d" style="left:222px;top:209px;width:42px;height:6px"><i style="width:38%;background:#5aa9ff;border-radius:3px"></i></div>
+  <div data-text="media_volume" data-font="0" data-color="#9aa7b8" data-bg="#19212e" data-align="r" style="left:264px;top:203px;width:26px;height:18px">19</div>
+
+  <div class="card side" data-region="media_tv_on" data-hit="media_tv_on" style="left:304px;top:44px;width:134px;height:49px"><svg><use href="#i-power"/></svg>TV an</div>
+  <div class="card side" data-region="media_screen_off" data-hit="media_screen_off" style="left:304px;top:98px;width:134px;height:49px"><svg><use href="#i-screen-off"/></svg>Bild aus</div>
+  <div class="card side" data-region="media_out_denon" data-hit="media_out_denon" style="left:304px;top:152px;width:134px;height:49px"><svg><use href="#i-speaker"/></svg>Ton Denon</div>
+  <div class="card side" data-region="media_out_tv" data-hit="media_out_tv" style="left:304px;top:206px;width:134px;height:50px"><svg><use href="#i-speaker"/></svg>Ton TV</div>
+</section></div>
+
+<!-- ===================================================== WOHNUNG -->
+<div class="frame" data-page="wohnung" data-variants="a,b,c"><div class="lbl">07 · Wohnung</div>
+<section class="screen" data-nav="wohnung">
+  <div class="title">Wohnung</div>
+  <div data-text="top_meta" data-font="0" data-color="#9aa7b8" data-bg="#0d1117" data-align="r" style="left:270px;top:12px;width:166px;height:20px">Alles ok · 15:24</div>
+
+  <div class="abs" data-region="flat_lock" data-hit="flat_lock" style="left:12px;top:44px;width:209px;height:102px">
+    <div class="card big v-a" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-amber"><svg><use href="#i-unlock"/></svg></div><div class="n">Wohnungstür</div><div class="s">Offen · tippen zum Abschließen</div></div>
+    <div class="card big v-b" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-green"><svg><use href="#i-lock"/></svg></div><div class="n">Wohnungstür</div><div class="s">Abgeschlossen · 2 s halten zum Öffnen</div></div>
+    <div class="card big alert v-c" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-red"><svg><use href="#i-lock"/></svg></div><div class="n">Wohnungstür</div><div class="s">Störung · Status unklar</div></div>
+  </div>
+  <div class="abs" data-region="flat_door" data-hit="flat_door" style="left:229px;top:44px;width:209px;height:102px">
+    <div class="card big v-a v-c" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-blue"><svg><use href="#i-door"/></svg></div><div class="n">Haustür</div><div class="s">2 s halten zum Öffnen</div></div>
+    <div class="card big active v-b" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-blue"><svg><use href="#i-door"/></svg></div><div class="n">Haustür</div><div class="s">Summer aktiv …</div></div>
+  </div>
+  <div data-fill="flat_door_progress" data-color="#5aa9ff" data-bg="#19212e" style="left:243px;top:134px;width:181px;height:4px"><i style="width:0"></i></div>
+  <div class="abs" data-region="flat_alarm" data-hit="flat_alarm" style="left:12px;top:154px;width:209px;height:102px">
+    <div class="card big v-a" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-green"><svg><use href="#i-shield"/></svg></div><div class="n">Alarm</div><div class="s">Unscharf · 2 s halten zum Schärfen</div></div>
+    <div class="card big v-b" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-amber"><svg><use href="#i-shield"/></svg></div><div class="n">Alarm</div><div class="s">Scharf · Entschärfen per App</div></div>
+    <div class="card big alert v-c" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-red"><svg><use href="#i-shield-alert"/></svg></div><div class="n">ALARM</div><div class="s">Alarm ausgelöst!</div></div>
+  </div>
+  <div data-fill="flat_alarm_progress" data-color="#ffb547" data-bg="#19212e" style="left:26px;top:244px;width:181px;height:4px"><i style="width:0"></i></div>
+  <div class="abs" data-region="flat_window" data-hit="flat_window" style="left:229px;top:154px;width:209px;height:102px">
+    <div class="card big v-a" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-green"><svg><use href="#i-window"/></svg></div><div class="n">Fenster</div><div class="s">Alle geschlossen</div></div>
+    <div class="card big alert v-b v-c" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-red"><svg><use href="#i-window"/></svg></div><div class="n">Fenster</div><div class="s">Bad-Fenster offen</div></div>
+  </div>
+</section></div>
+
+<!-- ===================================================== SCREENSAVER (drawn, no picture) -->
+<div class="frame" data-page="screensaver" data-variants="none"><div class="lbl">08 · Bildschirmschoner</div>
+<section class="screen" style="background:#000">
+  <div data-text="ss_clock" data-font="6" data-color="#c9d3df" data-bg="#000000" data-align="c" style="left:0;top:52px;width:450px;height:116px">15:24</div>
+  <div data-text="ss_date" data-font="1" data-color="#66748a" data-bg="#000000" data-align="c" style="left:0;top:172px;width:450px;height:24px">Samstag, 10. Oktober · 14° Regen</div>
+  <div data-text="ss_note" data-font="1" data-color="#ffb547" data-bg="#000000" data-align="c" style="left:0;top:214px;width:450px;height:24px"></div>
+  <div data-text="ss_bottom" data-font="1" data-color="#8a97a8" data-bg="#000000" data-align="c" style="left:0;top:270px;width:450px;height:24px">Bad 19,6° · Feuchte 72 % · Fenster zu</div>
+</section></div>
+
+<!-- ===================================================== MODAL -->
+<div class="frame" data-page="modal" data-variants="two,one"><div class="lbl">09 · Hinweis</div>
+<section class="screen" style="background:#06080c">
+  <div class="modal">
+    <div class="mi"><svg><use href="#i-warn"/></svg></div>
+    <div class="abs v-two" style="left:20px;top:192px;width:160px;height:44px"><div class="mbtn" style="left:0;top:0;width:160px"></div></div>
+    <div class="abs v-two" style="left:190px;top:192px;width:160px;height:44px"><div class="mbtn p" style="left:0;top:0;width:160px"></div></div>
+    <div class="abs v-one" style="left:20px;top:192px;width:330px;height:44px"><div class="mbtn p" style="left:0;top:0;width:330px"></div></div>
+  </div>
+  <div data-text="modal_title" data-font="2" data-color="#ffffff" data-bg="#1f1517" data-align="c" style="left:56px;top:112px;width:338px;height:28px">Bad-Fenster offen!</div>
+  <div data-text="modal_line1" data-font="0" data-color="#d6b5b8" data-bg="#1f1517" data-align="c" style="left:56px;top:146px;width:338px;height:18px">Unten ist noch offen.</div>
+  <div data-text="modal_line2" data-font="0" data-color="#d6b5b8" data-bg="#1f1517" data-align="c" style="left:56px;top:166px;width:338px;height:18px">Heizung im Bad ist pausiert.</div>
+  <div data-text="modal_btn1" data-font="1" data-color="#e8cfd2" data-bg="#2c1d20" data-align="c" class="v-two" style="left:64px;top:228px;width:152px;height:36px">Später</div>
+  <div data-text="modal_btn2" data-font="1" data-color="#2a0608" data-bg="#ff6b6b" data-align="c" class="v-two" style="left:234px;top:228px;width:152px;height:36px">OK</div>
+  <div data-text="modal_btn_single" data-font="1" data-color="#2a0608" data-bg="#ff6b6b" data-align="c" class="v-one" style="left:64px;top:228px;width:322px;height:36px">OK</div>
+  <div class="abs" data-hit="modal_btn1" style="left:60px;top:220px;width:160px;height:52px"></div>
+  <div class="abs" data-hit="modal_btn2" style="left:230px;top:220px;width:160px;height:52px"></div>
+</section></div>
+
+<!-- ===================================================== RING FRAME (thermostat) -->
+<div class="frame" data-page="ring" data-variants="frame"><div class="lbl">Ring</div>
+<section class="screen">
+  <div class="card" id="thermo-card" style="left:12px;top:44px;width:238px;height:212px">
+    <svg id="ring-svg" viewBox="0 0 238 212" style="position:absolute;left:-1px;top:-1px;width:238px;height:212px">
+      <defs><linearGradient id="heatgrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffb547"/><stop offset="1" stop-color="#ff5d3d"/></linearGradient></defs>
+      <circle id="ring-track" cx="119" cy="104" r="82" stroke="#232d3d" stroke-width="14" fill="none"/>
+      <circle id="ring-val" cx="119" cy="104" r="82" stroke="url(#heatgrad)" stroke-width="14" fill="none"/>
+      <circle id="ring-knob" r="9" fill="#ffffff" stroke="#ff6a3d" stroke-width="4"/>
+      <g transform="translate(46 222)"></g>
+    </svg>
+    <div class="cbtn" style="left:20px;top:156px;width:46px;height:46px;font:300 30px/46px var(--font);text-align:center;display:block">−</div>
+    <div class="cbtn" style="left:170px;top:156px;width:46px;height:46px;font:300 30px/46px var(--font);text-align:center;display:block">+</div>
+  </div>
+</section></div>
+
+<!-- ===================================================== WEATHER SPRITE -->
+<div class="frame" data-page="wx" data-variants="sprite"><div class="lbl">Wetter-Icons</div>
+<section class="screen" id="wx-sprite" style="background:#19212e;width:384px;height:96px"></section></div>
+
+<script>
+const WX = ['sunny','night','partly','cloudy','rainy','pouring','snowy','fog','lightning','windy','hail','unknown'];
+const TEMP_MIN = 16, TEMP_MAX = 26;
+const params = new URLSearchParams(location.search);
+const page = params.get('page'), variant = params.get('variant'), mode = params.get('mode') || 'preview';
+
+// ---- generated pages: light grids
+document.querySelectorAll('section[data-tiles]').forEach(s => {
+  const names = s.dataset.tiles.split(','), sample = s.dataset.sample.split(',').map(Number);
+  const id = s.closest('.frame').dataset.page;
+  let html = `<div class="title">${s.dataset.title}</div>
+    <div class="pager">${[0,1,2].map(i => `<i class="${i == s.dataset.pager ? 'on' : ''}"></i>`).join('')}</div>
+    <div data-text="top_meta" data-font="0" data-color="#9aa7b8" data-bg="#0d1117" data-align="r" style="left:270px;top:12px;width:166px;height:20px">3 an · 15:24</div>`;
+  names.forEach((n, i) => {
+    const x = 12 + (i % 3) * 145, y = 44 + Math.floor(i / 3) * 110;
+    html += `<div class="card tile" data-tile="${i}" data-region="tile_${i+1}" data-hit="tile_${i+1}" style="left:${x}px;top:${y}px;width:136px;height:102px">
+      <div class="ic"><svg><use href="#i-bulb"/></svg></div><div class="nm">${n}</div><div class="track"></div></div>
+      <div data-text="tile_${i+1}_state" data-font="0" data-tone="tile" data-align="l" style="left:${x+12}px;top:${y+72}px;width:112px;height:18px">${sample[i] ? sample[i] + ' %' : 'Aus'}</div>
+      <div data-fill="tile_${i+1}_bar" data-color="#ffb547" data-bg="#1c150a" style="left:${x+12}px;top:${y+93}px;width:112px;height:4px"><i style="width:${sample[i]}%;background:#ffb547;border-radius:2px"></i></div>`;
+  });
+  s.innerHTML = html;
+});
+
+// ---- nav
+const tpl = document.getElementById('nav-tpl');
+document.querySelectorAll('section[data-nav]').forEach(s => {
+  const n = tpl.content.cloneNode(true);
+  n.querySelector(`.tab[data-k="${s.dataset.nav}"]`).classList.add('on');
+  s.appendChild(n);
+});
+
+// ---- weather sprite
+document.getElementById('wx-sprite').innerHTML = WX.map((w, i) =>
+  `<svg style="position:absolute;left:${(i % 8) * 48}px;top:${Math.floor(i / 8) * 48}px;width:48px;height:48px"><use href="#w-${w}"/></svg>`).join('');
+
+// ---- variants: elements with class v-<name> are shown only in that variant
+function applyVariant(frame, v) {
+  frame.querySelectorAll('[class*="v-"]').forEach(el => {
+    const vs = [...el.classList].filter(c => c.startsWith('v-')).map(c => c.slice(2));
+    el.style.display = vs.includes(v) ? '' : 'none';
+  });
+  const on = v === 'on';
+  frame.querySelectorAll('.tile').forEach(t => t.classList.toggle('on', on));
+  frame.querySelectorAll('.preset, .side').forEach(t => t.classList.toggle('on', on));
+  if (frame.dataset.page === 'home') frame.querySelectorAll('.qbtn').forEach(t => t.classList.toggle('hl', v === 'alt'));
+  // tile state text colours follow the variant
+  frame.querySelectorAll('[data-tone="tile"]').forEach(t => {
+    t.dataset.color = on ? '#ffb547' : '#627084'; t.dataset.bg = on ? '#33270f' : '#19212e'; t.style.color = t.dataset.color;
+  });
+}
+
+// ---- thermostat ring
+function drawRing(t) {
+  const val = document.getElementById('ring-val'), knob = document.getElementById('ring-knob'), track = document.getElementById('ring-track');
+  const r = 82, c = 2 * Math.PI * r, span = 0.75;           // 270 degree arc, open at the bottom
+  track.setAttribute('stroke-dasharray', `${c * span} ${c}`);
+  track.setAttribute('transform', 'rotate(135 119 104)');
+  const off = t === 'off';
+  const f = off ? 0 : Math.max(0, Math.min(1, (parseFloat(t) - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)));
+  val.setAttribute('stroke-dasharray', `${c * span * f} ${c}`);
+  val.setAttribute('transform', 'rotate(135 119 104)');
+  val.style.display = off ? 'none' : '';
+  const a = (135 + 270 * f) * Math.PI / 180;
+  knob.setAttribute('cx', 119 + r * Math.cos(a));
+  knob.setAttribute('cy', 104 + r * Math.sin(a));
+  knob.setAttribute('stroke', off ? '#627084' : '#ff6a3d');
+}
+
+// ---- layout export
+function exportLayout(frame) {
+  const scr = frame.querySelector('.screen').getBoundingClientRect();
+  const rect = el => { const r = el.getBoundingClientRect(); return [Math.round(r.left - scr.left), Math.round(r.top - scr.top), Math.round(r.width), Math.round(r.height)]; };
+  const out = { page: frame.dataset.page, texts: {}, hits: {}, regions: {}, fills: {} };
+  frame.querySelectorAll('[data-text]').forEach(el => { if (el.style.display === 'none') return;
+    out.texts[el.dataset.text] = { rect: rect(el), font: +el.dataset.font, color: el.dataset.color, bg: el.dataset.bg, align: el.dataset.align || 'l' }; });
+  frame.querySelectorAll('[data-hit]').forEach(el => { if (el.offsetParent === null && !el.closest('.nav')) return; out.hits[el.dataset.hit] = rect(el); });
+  frame.querySelectorAll('[data-region]').forEach(el => { out.regions[el.dataset.region] = rect(el); });
+  frame.querySelectorAll('[data-fill]').forEach(el => { out.fills[el.dataset.fill] = { rect: rect(el), color: el.dataset.color, bg: el.dataset.bg }; });
+  const pre = document.createElement('script'); pre.type = 'application/json'; pre.id = 'layout'; pre.textContent = JSON.stringify(out);
+  document.body.appendChild(pre);
+}
+
+if (page) {
+  document.body.classList.add('single');
+  if (mode === 'export') document.body.classList.add('export');
+  const frame = document.querySelector(`.frame[data-page="${page}"]`);
+  frame.classList.add('show');
+  applyVariant(frame, variant || frame.dataset.variants.split(',')[0]);
+  if (page === 'ring') drawRing(params.get('t') || '22');
+  exportLayout(frame);
+} else {
+  document.body.classList.add('gallery');
+  document.querySelectorAll('.frame').forEach(f => {
+    if (['ring', 'wx'].includes(f.dataset.page)) { f.style.display = 'none'; return; }
+    const v = { licht: 'on', licht2: 'on', bad: 'on', medien: 'on', modal: 'two', wohnung: 'a' }[f.dataset.page] || f.dataset.variants.split(',')[0];
+    applyVariant(f, v);
+    // preview: thermostat ring inside the bad page
+    if (f.dataset.page === 'bad') {
+      const slot = f.querySelector('.thermo-slot');
+      slot.innerHTML = document.getElementById('thermo-card').outerHTML.replace('id="thermo-card"', '').replace(/left:12px;top:44px;/, 'left:0;top:0;');
+    }
+    // wx icon preview
+    const wi = f.querySelector('[data-region="home_wx_icon"]');
+    if (wi) wi.innerHTML = '<svg style="width:48px;height:48px"><use href="#w-rainy"/></svg>';
+  });
+  drawRing('22');
+  // mark the invisible EU strip
+  document.querySelectorAll('.screen').forEach(s => { const m = document.createElement('div'); m.style.cssText = 'position:absolute;left:450px;top:0;width:30px;height:320px;background:repeating-linear-gradient(45deg,#000 0 4px,#111 4px 8px);opacity:.85'; s.appendChild(m); });
+}
+</script>
+</body>
+</html>

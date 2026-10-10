@@ -1,0 +1,15 @@
+// Touch release: report the last coordinates (used for swipe detection)
+// 0x65 <x/2> <y/2> 0x00 FF FF FF  (touch_event = false)
+if(tch0>0)
+{
+  sys0=tch0/2
+  sys1=tch1/2
+}else
+{
+  sys0=tch2/2
+  sys1=tch3/2
+}
+printh 65
+prints sys0,1
+prints sys1,1
+printh 00 ff ff ff

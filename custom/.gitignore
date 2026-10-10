@@ -1,0 +1,7 @@
+# build outputs of custom/tools/build_assets.py (regenerate locally)
+build/
+nextion/pictures/
+nextion/fonts/
+nextion/*.tft
+nextion/*.HMI
+nextion/*.hmi
