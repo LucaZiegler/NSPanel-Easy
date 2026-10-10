@@ -81,14 +81,14 @@ uart:
   - id: tf_uart
     tx_pin: 16
     rx_pin: 17
-    baud_rate: 921600
+    # 115200 baud: the UART itself paces drawing bursts so the Nextion input buffer cannot overflow
+    baud_rate: 115200
 
 display:
   - platform: nextion
     id: disp
     uart_id: tf_uart
     update_interval: never
-    command_spacing: 3ms
     tft_url: ${tft_url}
     on_setup:
       then:

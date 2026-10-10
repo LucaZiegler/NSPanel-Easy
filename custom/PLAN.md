@@ -18,13 +18,13 @@ Basis: Fork von NSPanel Easy. Eigene Firmware unter `custom/` und `components/ns
 
 ## Schritte
 
-1. [ ] Design final für 450×320, nur flache Flächen unter dynamischem Text (`custom/design/ui.html`)
-2. [ ] Asset-Pipeline `custom/tools/build_assets.py`: Bilder rendern (Edge headless), Koordinaten exportieren,
+1. [x] Design final für 450×320, nur flache Flächen unter dynamischem Text (`custom/design/ui.html`)
+2. [x] Asset-Pipeline `custom/tools/build_assets.py`: Bilder rendern (Edge headless), Koordinaten exportieren,
        Thermostat-Ringe, Wetter-Icons, Schriftbreiten aus `.zi` → `components/nspanel_ui/generated_*.h`
-3. [ ] Nextion-Bausatz `custom/nextion/`: Bilder 000–NNN, Schriften, Program.s, Seiten-Events, Anleitung
+3. [x] Nextion-Bausatz `custom/nextion/`: Bilder 000–038, Schriften 0–6, Program.s, Seiten-Events, Anleitung
 4. [ ] **Nutzer:** TFT im Nextion Editor kompilieren (Anleitung `custom/nextion/BUILD.md`, ca. 10 Minuten)
-5. [ ] ESPHome-Komponente `components/nspanel_ui` (Seiten, Zeichnen, Touch, Bildschirmschoner, Overlays)
-6. [ ] ESPHome-Paket `custom/nspanel_custom.yaml` (Hardware, HA-Zustände, Aktionen, Kompatibilitäts-API)
-7. [ ] Kompilieren über den ESPHome-Builder in HA, Fehler beheben
+5. [x] ESPHome-Komponente `components/nspanel_ui` (Seiten, Zeichnen, Touch, Bildschirmschoner, Overlays)
+6. [x] ESPHome-Paket `custom/nspanel_custom.yaml` (Hardware, HA-Zustände, Aktionen, Kompatibilitäts-API)
+7. [ ] Kompilieren über den ESPHome-Builder in HA, Fehler beheben (Testkonfiguration `nspanel-ui-test.yaml`)
 8. [ ] Installation: TFT nach `/local/nspanel/` hochladen, TFT aufs Panel, Firmware per OTA, HA-Aktionen erlauben
 9. [ ] Test am Panel, AppDaemon-App abschalten, Doku
