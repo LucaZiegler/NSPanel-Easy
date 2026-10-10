@@ -214,252 +214,297 @@ script:
 
 text_sensor:
   - platform: homeassistant
+    id: ha_00
     entity_id: ${light_1}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 0, x);
   - platform: homeassistant
+    id: ha_01
     entity_id: ${light_1}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 0, x);
   - platform: homeassistant
+    id: ha_02
     entity_id: ${light_2}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 1, x);
   - platform: homeassistant
+    id: ha_03
     entity_id: ${light_2}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 1, x);
   - platform: homeassistant
+    id: ha_04
     entity_id: ${light_3}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 2, x);
   - platform: homeassistant
+    id: ha_05
     entity_id: ${light_3}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 2, x);
   - platform: homeassistant
+    id: ha_06
     entity_id: ${light_4}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 3, x);
   - platform: homeassistant
+    id: ha_07
     entity_id: ${light_4}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 3, x);
   - platform: homeassistant
+    id: ha_08
     entity_id: ${light_5}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 4, x);
   - platform: homeassistant
+    id: ha_09
     entity_id: ${light_5}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 4, x);
   - platform: homeassistant
+    id: ha_10
     entity_id: ${light_6}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 5, x);
   - platform: homeassistant
+    id: ha_11
     entity_id: ${light_6}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 5, x);
   - platform: homeassistant
+    id: ha_12
     entity_id: ${light_7}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 6, x);
   - platform: homeassistant
+    id: ha_13
     entity_id: ${light_7}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 6, x);
   - platform: homeassistant
+    id: ha_14
     entity_id: ${light_8}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 7, x);
   - platform: homeassistant
+    id: ha_15
     entity_id: ${light_8}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 7, x);
   - platform: homeassistant
+    id: ha_16
     entity_id: ${light_9}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 8, x);
   - platform: homeassistant
+    id: ha_17
     entity_id: ${light_9}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 8, x);
   - platform: homeassistant
+    id: ha_18
     entity_id: ${light_10}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 9, x);
   - platform: homeassistant
+    id: ha_19
     entity_id: ${light_10}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 9, x);
   - platform: homeassistant
+    id: ha_20
     entity_id: ${light_11}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 10, x);
   - platform: homeassistant
+    id: ha_21
     entity_id: ${light_11}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 10, x);
   - platform: homeassistant
+    id: ha_22
     entity_id: ${light_12}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT + 11, x);
   - platform: homeassistant
+    id: ha_23
     entity_id: ${light_12}
     attribute: brightness
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LIGHT_BRI + 11, x);
   - platform: homeassistant
+    id: ha_24
     entity_id: ${climate}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_CLIMATE_MODE, x);
   - platform: homeassistant
+    id: ha_25
     entity_id: ${climate}
     attribute: temperature
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_CLIMATE_TARGET, x);
   - platform: homeassistant
+    id: ha_26
     entity_id: ${climate}
     attribute: current_temperature
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_CLIMATE_CURRENT, x);
   - platform: homeassistant
+    id: ha_27
     entity_id: ${climate}
     attribute: current_humidity
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_CLIMATE_HUMIDITY, x);
   - platform: homeassistant
+    id: ha_28
     entity_id: ${climate}
     attribute: hvac_action
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_CLIMATE_ACTION, x);
   - platform: homeassistant
+    id: ha_29
     entity_id: ${climate}
     attribute: preset_mode
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_CLIMATE_PRESET, x);
   - platform: homeassistant
+    id: ha_30
     entity_id: ${climate}
     attribute: window_open
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_CLIMATE_WINDOW, x);
   - platform: homeassistant
+    id: ha_31
     entity_id: ${window_top}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_WIN_TOP, x);
   - platform: homeassistant
+    id: ha_32
     entity_id: ${window_bottom}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_WIN_BOTTOM, x);
   - platform: homeassistant
+    id: ha_33
     entity_id: ${weather}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_WX_STATE, x);
   - platform: homeassistant
+    id: ha_34
     entity_id: ${weather}
     attribute: temperature
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_WX_TEMP, x);
   - platform: homeassistant
+    id: ha_35
     entity_id: ${weather}
     attribute: apparent_temperature
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_WX_FEELS, x);
   - platform: homeassistant
+    id: ha_36
     entity_id: ${media_player}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_MEDIA_STATE, x);
   - platform: homeassistant
+    id: ha_37
     entity_id: ${media_player}
     attribute: media_title
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_MEDIA_TITLE, x);
   - platform: homeassistant
+    id: ha_38
     entity_id: ${media_player}
     attribute: media_artist
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_MEDIA_ARTIST, x);
   - platform: homeassistant
+    id: ha_39
     entity_id: ${media_player}
     attribute: app_name
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_MEDIA_APP, x);
   - platform: homeassistant
+    id: ha_40
     entity_id: ${media_player}
     attribute: source
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_MEDIA_SOURCE, x);
   - platform: homeassistant
+    id: ha_41
     entity_id: ${media_player}
     attribute: volume_level
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_MEDIA_VOLUME, x);
   - platform: homeassistant
+    id: ha_42
     entity_id: ${media_player}
     attribute: sound_output
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_MEDIA_OUTPUT, x);
   - platform: homeassistant
+    id: ha_43
     entity_id: ${lock}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LOCK, x);
   - platform: homeassistant
+    id: ha_44
     entity_id: ${alarm}
     internal: true
     on_value:

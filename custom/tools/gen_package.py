@@ -190,8 +190,9 @@ def main() -> None:
     a("            value: !lambda return value;")
     a("")
     a("text_sensor:")
-    for key, ent, attr in SENSORS:
+    for n, (key, ent, attr) in enumerate(SENSORS):
         a("  - platform: homeassistant")
+        a(f"    id: ha_{n:02d}")
         a(f"    entity_id: ${{{ent}}}")
         if attr:
             a(f"    attribute: {attr}")
