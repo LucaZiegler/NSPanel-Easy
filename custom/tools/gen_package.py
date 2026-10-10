@@ -214,8 +214,9 @@ API_AND_HARDWARE = r"""api:
         url: string
       then:
         - lambda: |-
+            const std::string u = url.str();
             id(ui).pause(true);
-            if (!url.empty()) id(disp).set_tft_url(url);
+            if (!u.empty()) id(disp).set_tft_url(u);
             id(disp).upload_tft();
     - action: play_rtttl
       variables:
@@ -227,7 +228,7 @@ API_AND_HARDWARE = r"""api:
       variables:
         cmd: string
       then:
-        - lambda: id(disp).send_command_printf("%s", cmd.c_str());
+        - lambda: id(disp).send_command_printf("%s", cmd.str().c_str());
     - action: wake
       then:
         - lambda: id(ui).wake();
@@ -256,9 +257,10 @@ API_AND_HARDWARE = r"""api:
         title: string
       then:
         - lambda: |-
-            if (entity.rfind("light.", 0) == 0) id(ui).navigate("licht");
-            else if (entity.rfind("climate.", 0) == 0) id(ui).navigate("bad");
-            else if (entity.rfind("media_player.", 0) == 0) id(ui).navigate("medien");
+            const std::string e = entity.str();  // API strings arrive as StringRef
+            if (e.rfind("light.", 0) == 0) id(ui).navigate("licht");
+            else if (e.rfind("climate.", 0) == 0) id(ui).navigate("bad");
+            else if (e.rfind("media_player.", 0) == 0) id(ui).navigate("medien");
             else id(ui).wake();
     - action: notify_on_screensaver
       variables:
