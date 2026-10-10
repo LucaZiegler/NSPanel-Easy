@@ -203,6 +203,8 @@ class NSPanelUI : public Component {
   // touch
   bool pressing_{false};
   bool swallow_{false};
+  bool last_touch_pressed_{false};
+  uint32_t last_touch_ms_{0};
   int16_t press_x_{0}, press_y_{0};
   uint32_t press_ms_{0};
   Hold hold_{HOLD_NONE};

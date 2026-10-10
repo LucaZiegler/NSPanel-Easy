@@ -41,6 +41,7 @@ static constexpr uint32_t G_FLAT = 1u << 12;
 static constexpr uint32_t G_SS = 1u << 13;
 
 static constexpr uint32_t HOLD_MS = 2000;            ///< hold duration for door, unlock and arm
+static constexpr uint32_t TOUCH_REPEAT_MS = 80;      ///< same touch event again within this time = duplicate
 static constexpr int16_t SWIPE_MIN_DX = 70;          ///< horizontal distance for a swipe
 static constexpr int16_t SWIPE_MAX_DY = 60;          ///< vertical tolerance for a swipe
 static constexpr uint32_t TARGET_SEND_DELAY = 700;   ///< collect +/- taps before sending
@@ -811,6 +812,14 @@ void NSPanelUI::on_touch(uint8_t half_x, uint8_t half_y, bool pressed) {
   const int16_t x = half_x * 2;
   const int16_t y = half_y * 2;
   const uint32_t now = millis();
+  // The display reports every touch event twice within a few milliseconds: drop the repeat.
+  if (pressed == this->last_touch_pressed_ && now - this->last_touch_ms_ < TOUCH_REPEAT_MS) {
+    ESP_LOGV(TAG, "Touch repeat ignored (%d,%d %s)", x, y, pressed ? "press" : "release");
+    return;
+  }
+  this->last_touch_pressed_ = pressed;
+  this->last_touch_ms_ = now;
+  ESP_LOGD(TAG, "Touch %s at %d,%d", pressed ? "press" : "release", x, y);
   this->activity_();
 
   if (pressed) {
