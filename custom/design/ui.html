@@ -134,6 +134,10 @@
   .big.alert { border-color: #6b2328; background: #241417; }
   .big.active { border-color: var(--blue-line); background: var(--blue-tile); }
 
+  .tvb { position: absolute; width: 59px; height: 38px; border-radius: 10px; background: var(--card-hi); display: grid; place-items: center; font: 700 12px var(--font); color: var(--text); }
+  .tvb svg { width: 20px; height: 20px; color: var(--text-2); }
+  .tvb.on { background: var(--blue-tile); color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue-line); }
+  .tvb.on svg { color: var(--blue); }
   .scene { position: absolute; border-radius: 14px; color: #fff; }
   .scene .n { position: absolute; left: 12px; bottom: 26px; font: 700 15px var(--font); }
   .scene .s { position: absolute; left: 12px; bottom: 11px; font: 600 11px var(--font); opacity: .78; }
@@ -165,6 +169,9 @@
     <symbol id="i-prev" viewBox="0 0 24 24"><path d="M18 5L8 12l10 7z"/><path d="M6 5v14"/></symbol>
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M6 5l10 7-10 7z"/><path d="M18 5v14"/></symbol>
     <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></symbol>
+    <symbol id="i-vol-down" viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 12h5"/></symbol>
+    <symbol id="i-vol-up" viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 12h5"/><path d="M18.5 9.5v5"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 9.5l5 5"/><path d="M21 9.5l-5 5"/></symbol>
     <symbol id="i-screen-off" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/><path d="M4 4l16 14"/></symbol>
     <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5"/><path d="M12 18v.01"/></symbol>
     <!-- weather -->
@@ -299,11 +306,14 @@
     <div class="card big v-b" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-green"><svg><use href="#i-lock"/></svg></div><div class="n">Wohnungstür</div><div class="s">Abgeschlossen · 2 s halten zum Öffnen</div></div>
     <div class="card big alert v-c" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-red"><svg><use href="#i-lock"/></svg></div><div class="n">Wohnungstür</div><div class="s">Störung · Status unklar</div></div>
   </div>
-  <div class="abs" data-region="flat_door" data-hit="flat_door" style="left:229px;top:44px;width:209px;height:102px">
-    <div class="card big v-a v-c" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-blue"><svg><use href="#i-door"/></svg></div><div class="n">Haustür</div><div class="s">2 s halten zum Öffnen</div></div>
-    <div class="card big active v-b" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-blue"><svg><use href="#i-door"/></svg></div><div class="n">Haustür</div><div class="s">Summer aktiv …</div></div>
-  </div>
-  <div data-fill="flat_door_progress" data-color="#5aa9ff" data-bg="#19212e" style="left:243px;top:134px;width:181px;height:4px"><i style="width:0"></i></div>
+  <!-- TV quick controls: variant b = all buttons highlighted (active source / muted) -->
+  <div class="card" style="left:229px;top:44px;width:209px;height:102px"></div>
+  <div class="tvb" data-region="tv_vol_down" data-hit="tv_vol_down" style="left:239px;top:54px"><svg><use href="#i-vol-down"/></svg></div>
+  <div class="tvb" data-region="tv_mute" data-hit="tv_mute" style="left:304px;top:54px"><svg><use href="#i-mute"/></svg></div>
+  <div class="tvb" data-region="tv_vol_up" data-hit="tv_vol_up" style="left:369px;top:54px"><svg><use href="#i-vol-up"/></svg></div>
+  <div class="tvb" data-region="tv_src_1" data-hit="tv_src_1" style="left:239px;top:98px">Netflix</div>
+  <div class="tvb" data-region="tv_src_2" data-hit="tv_src_2" style="left:304px;top:98px">Live TV</div>
+  <div class="tvb" data-region="tv_src_3" data-hit="tv_src_3" style="left:369px;top:98px">HDMI 2</div>
   <div class="abs" data-region="flat_alarm" data-hit="flat_alarm" style="left:12px;top:154px;width:209px;height:102px">
     <div class="card big v-a" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-green"><svg><use href="#i-shield"/></svg></div><div class="n">Alarm</div><div class="s">Unscharf · 2 s halten zum Schärfen</div></div>
     <div class="card big v-b" style="left:0;top:0;width:209px;height:102px"><div class="bic tone-amber"><svg><use href="#i-shield"/></svg></div><div class="n">Alarm</div><div class="s">Scharf · Entschärfen per App</div></div>
@@ -408,6 +418,7 @@ function applyVariant(frame, v) {
   const on = v === 'on';
   frame.querySelectorAll('.tile').forEach(t => t.classList.toggle('on', on));
   frame.querySelectorAll('.preset, .side').forEach(t => t.classList.toggle('on', on));
+  frame.querySelectorAll('.tvb').forEach(t => t.classList.toggle('on', v === 'b'));
   if (frame.dataset.page === 'home') frame.querySelectorAll('.qbtn').forEach(t => t.classList.toggle('hl', v === 'alt'));
   // tile state text colours follow the variant
   frame.querySelectorAll('[data-tone="tile"]').forEach(t => {

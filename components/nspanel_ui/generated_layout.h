@@ -210,14 +210,23 @@ constexpr FillSpec F_MEDIEN_MEDIA_VOLUME = {{222, 209, 42, 6}, 23903, 8551};
 // ---- page wohnung
 constexpr TextSpec T_WOHNUNG_TOP_META = {{270, 12, 166, 20}, 0, 40247, 2178, 2};
 constexpr Rect H_WOHNUNG_FLAT_LOCK = {12, 44, 209, 102};
-constexpr Rect H_WOHNUNG_FLAT_DOOR = {229, 44, 209, 102};
+constexpr Rect H_WOHNUNG_TV_VOL_DOWN = {239, 54, 59, 38};
+constexpr Rect H_WOHNUNG_TV_MUTE = {304, 54, 59, 38};
+constexpr Rect H_WOHNUNG_TV_VOL_UP = {369, 54, 59, 38};
+constexpr Rect H_WOHNUNG_TV_SRC_1 = {239, 98, 59, 38};
+constexpr Rect H_WOHNUNG_TV_SRC_2 = {304, 98, 59, 38};
+constexpr Rect H_WOHNUNG_TV_SRC_3 = {369, 98, 59, 38};
 constexpr Rect H_WOHNUNG_FLAT_ALARM = {12, 154, 209, 102};
 constexpr Rect H_WOHNUNG_FLAT_WINDOW = {229, 154, 209, 102};
 constexpr Rect R_WOHNUNG_FLAT_LOCK = {12, 44, 209, 102};
-constexpr Rect R_WOHNUNG_FLAT_DOOR = {229, 44, 209, 102};
+constexpr Rect R_WOHNUNG_TV_VOL_DOWN = {239, 54, 59, 38};
+constexpr Rect R_WOHNUNG_TV_MUTE = {304, 54, 59, 38};
+constexpr Rect R_WOHNUNG_TV_VOL_UP = {369, 54, 59, 38};
+constexpr Rect R_WOHNUNG_TV_SRC_1 = {239, 98, 59, 38};
+constexpr Rect R_WOHNUNG_TV_SRC_2 = {304, 98, 59, 38};
+constexpr Rect R_WOHNUNG_TV_SRC_3 = {369, 98, 59, 38};
 constexpr Rect R_WOHNUNG_FLAT_ALARM = {12, 154, 209, 102};
 constexpr Rect R_WOHNUNG_FLAT_WINDOW = {229, 154, 209, 102};
-constexpr FillSpec F_WOHNUNG_FLAT_DOOR_PROGRESS = {{243, 134, 181, 4}, 23903, 6405};
 constexpr FillSpec F_WOHNUNG_FLAT_ALARM_PROGRESS = {{26, 244, 181, 4}, 64936, 6405};
 
 // ---- page screensaver

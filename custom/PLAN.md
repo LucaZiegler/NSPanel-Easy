@@ -25,6 +25,7 @@ Basis: Fork von NSPanel Easy. Eigene Firmware unter `custom/` und `components/ns
 4. [ ] **Nutzer:** TFT im Nextion Editor kompilieren (Anleitung `custom/nextion/BUILD.md`, ca. 10 Minuten)
 5. [x] ESPHome-Komponente `components/nspanel_ui` (Seiten, Zeichnen, Touch, Bildschirmschoner, Overlays)
 6. [x] ESPHome-Paket `custom/nspanel_custom.yaml` (Hardware, HA-Zustände, Aktionen, Kompatibilitäts-API)
-7. [ ] Kompilieren über den ESPHome-Builder in HA, Fehler beheben (Testkonfiguration `nspanel-ui-test.yaml`)
+7. [x] Kompilieren über den ESPHome-Builder in HA, Fehler beheben (Testkonfiguration `nspanel-ui-test.yaml`,
+       RAM 31 %, Flash 55 %)
 8. [ ] Installation: TFT nach `/local/nspanel/` hochladen, TFT aufs Panel, Firmware per OTA, HA-Aktionen erlauben
 9. [ ] Test am Panel, AppDaemon-App abschalten, Doku

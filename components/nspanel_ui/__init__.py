@@ -17,7 +17,7 @@ CONF_CLIMATE = "climate"
 CONF_MEDIA_PLAYER = "media_player"
 CONF_LOCK = "lock"
 CONF_ALARM = "alarm"
-CONF_DOOR_SCRIPT = "door_script"
+CONF_TV_SOURCES = "tv_sources"
 CONF_TV_ON_SCRIPT = "tv_on_script"
 CONF_SCREEN_OFF_SCRIPT = "screen_off_script"
 CONF_OUT_DENON_SCRIPT = "out_denon_script"
@@ -33,7 +33,6 @@ ROLES = [
     CONF_MEDIA_PLAYER,
     CONF_LOCK,
     CONF_ALARM,
-    CONF_DOOR_SCRIPT,
     CONF_TV_ON_SCRIPT,
     CONF_SCREEN_OFF_SCRIPT,
     CONF_OUT_DENON_SCRIPT,
@@ -48,6 +47,7 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Required(CONF_LIGHTS): cv.All(cv.ensure_list(cv.entity_id), cv.Length(min=12, max=12)),
         cv.Required(CONF_SCENES): cv.All(cv.ensure_list(cv.entity_id), cv.Length(min=6, max=6)),
         cv.Required(CONF_QUICK_SCENES): cv.All(cv.ensure_list(cv.entity_id), cv.Length(min=3, max=3)),
+        cv.Required(CONF_TV_SOURCES): cv.All(cv.ensure_list(cv.string), cv.Length(min=3, max=3)),
         **{cv.Required(role): cv.entity_id for role in ROLES},
         cv.Optional(CONF_SCREENSAVER_TIMEOUT, default="30s"): cv.positive_time_period_milliseconds,
     }
@@ -65,6 +65,8 @@ async def to_code(config):
         cg.add(var.set_scene(i, entity))
     for i, entity in enumerate(config[CONF_QUICK_SCENES]):
         cg.add(var.set_quick(i, entity))
+    for i, source in enumerate(config[CONF_TV_SOURCES]):
+        cg.add(var.set_tv_source(i, source))
     for i, role in enumerate(ROLES):
         cg.add(var.set_role(i, config[role]))
     cg.add(var.set_screensaver_timeout(config[CONF_SCREENSAVER_TIMEOUT].total_milliseconds))

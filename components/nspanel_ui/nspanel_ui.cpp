@@ -40,7 +40,7 @@ static constexpr uint32_t G_MEDIA_SIDE = 1u << 11;
 static constexpr uint32_t G_FLAT = 1u << 12;
 static constexpr uint32_t G_SS = 1u << 13;
 
-static constexpr uint32_t HOLD_MS = 2000;            ///< hold duration for door, unlock and arm
+static constexpr uint32_t HOLD_MS = 2000;            ///< hold duration for unlock and arm
 static constexpr uint32_t TOUCH_REPEAT_MS = 80;      ///< same touch event again within this time = duplicate
 static constexpr int16_t SWIPE_MIN_DX = 70;          ///< horizontal distance for a swipe
 static constexpr int16_t SWIPE_MAX_DY = 60;          ///< vertical tolerance for a swipe
@@ -288,12 +288,17 @@ void NSPanelUI::set_state(uint8_t key, const std::string &value) {
       this->mark_(G_WX | G_SS);
       break;
     case K_MEDIA_STATE:
-      this->mark_(G_MEDIA_INFO | G_MEDIA_PLAY | G_MEDIA_SIDE | G_META);
+      this->mark_(G_MEDIA_INFO | G_MEDIA_PLAY | G_MEDIA_SIDE | G_META | G_FLAT);
+      break;
+    case K_MEDIA_SOURCE:
+      this->mark_(G_MEDIA_INFO | G_FLAT);
+      break;
+    case K_MEDIA_MUTED:
+      this->mark_(G_FLAT);
       break;
     case K_MEDIA_TITLE:
     case K_MEDIA_ARTIST:
     case K_MEDIA_APP:
-    case K_MEDIA_SOURCE:
       this->mark_(G_MEDIA_INFO);
       break;
     case K_MEDIA_VOLUME:
@@ -752,22 +757,37 @@ void NSPanelUI::draw_flat_() {
   const std::string &lock = this->st_(K_LOCK);
   const std::string &alarm = this->st_(K_ALARM);
   const Rect &rl = R_WOHNUNG_FLAT_LOCK;
-  const Rect &rd = R_WOHNUNG_FLAT_DOOR;
   const Rect &ra = R_WOHNUNG_FLAT_ALARM;
   const Rect &rw = R_WOHNUNG_FLAT_WINDOW;
   const uint8_t lock_pic = lock == "unlocked" || lock == "open" ? PIC_WOHNUNG_A
                            : lock == "locked"                    ? PIC_WOHNUNG_B
                                                                  : PIC_WOHNUNG_C;
-  const uint8_t door_pic = this->door_active_until_ms_ != 0 ? PIC_WOHNUNG_B : PIC_WOHNUNG_A;
   uint8_t alarm_pic = PIC_WOHNUNG_A;
   if (alarm == "triggered")
     alarm_pic = PIC_WOHNUNG_C;
   else if (alarm.rfind("armed", 0) == 0 || alarm == "arming" || alarm == "pending")
     alarm_pic = PIC_WOHNUNG_B;
   this->crop_(rl.x, rl.y, rl.w, rl.h, lock_pic);
-  this->crop_(rd.x, rd.y, rd.w, rd.h, door_pic);
   this->crop_(ra.x, ra.y, ra.w, ra.h, alarm_pic);
   this->crop_(rw.x, rw.y, rw.w, rw.h, this->any_window_open_() ? PIC_WOHNUNG_B : PIC_WOHNUNG_A);
+  this->draw_tv_();
+}
+
+void NSPanelUI::draw_tv_() {
+  // highlighted (variant b) = muted / currently selected source
+  const bool on = usable(this->st_(K_MEDIA_STATE)) && this->st_(K_MEDIA_STATE) != "off";
+  const bool muted = on && this->st_(K_MEDIA_MUTED) == "True";
+  const Rect buttons[6] = {R_WOHNUNG_TV_VOL_DOWN, R_WOHNUNG_TV_MUTE,  R_WOHNUNG_TV_VOL_UP,
+                           R_WOHNUNG_TV_SRC_1,    R_WOHNUNG_TV_SRC_2, R_WOHNUNG_TV_SRC_3};
+  for (uint8_t i = 0; i < 6; i++) {
+    bool active = false;
+    if (i == 1)
+      active = muted;
+    else if (i >= 3)
+      active = on && !this->tv_sources_[i - 3].empty() && this->st_(K_MEDIA_SOURCE) == this->tv_sources_[i - 3];
+    const Rect &r = buttons[i];
+    this->crop_(r.x, r.y, r.w, r.h, active ? PIC_WOHNUNG_B : PIC_WOHNUNG_A);
+  }
 }
 
 void NSPanelUI::draw_screensaver_() {
@@ -864,9 +884,7 @@ bool NSPanelUI::start_hold_(int16_t x, int16_t y) {
   if (this->page_ != PAGE_WOHNUNG)
     return false;
   Hold h = HOLD_NONE;
-  if (H_WOHNUNG_FLAT_DOOR.contains(x, y)) {
-    h = HOLD_DOOR;
-  } else if (H_WOHNUNG_FLAT_LOCK.contains(x, y) && this->st_(K_LOCK) == "locked") {
+  if (H_WOHNUNG_FLAT_LOCK.contains(x, y) && this->st_(K_LOCK) == "locked") {
     h = HOLD_UNLOCK;
   } else if (H_WOHNUNG_FLAT_ALARM.contains(x, y) && this->st_(K_ALARM) == "disarmed") {
     h = HOLD_ARM;
@@ -1085,12 +1103,40 @@ void NSPanelUI::tap_(int16_t x, int16_t y) {
       return;
     }
 
-    case PAGE_WOHNUNG:
+    case PAGE_WOHNUNG: {
       if (H_WOHNUNG_FLAT_LOCK.contains(x, y) && this->st_(K_LOCK) != "locked")
         return this->call_("lock.lock", this->roles_[R_LOCK]);
       if (H_WOHNUNG_FLAT_WINDOW.contains(x, y))
         return this->show_page_(PAGE_BAD);
+      const std::string &media = this->roles_[R_MEDIA];
+      const Rect sources[TV_SOURCE_COUNT] = {H_WOHNUNG_TV_SRC_1, H_WOHNUNG_TV_SRC_2, H_WOHNUNG_TV_SRC_3};
+      const Rect *hit = nullptr;
+      if (H_WOHNUNG_TV_VOL_DOWN.contains(x, y)) {
+        hit = &R_WOHNUNG_TV_VOL_DOWN;
+        this->call_("media_player.volume_down", media);
+      } else if (H_WOHNUNG_TV_VOL_UP.contains(x, y)) {
+        hit = &R_WOHNUNG_TV_VOL_UP;
+        this->call_("media_player.volume_up", media);
+      } else if (H_WOHNUNG_TV_MUTE.contains(x, y)) {
+        const bool muted = this->st_(K_MEDIA_MUTED) == "True";
+        this->state_[K_MEDIA_MUTED] = muted ? "False" : "True";
+        this->call_("media_player.volume_mute", media, "is_volume_muted", muted ? "false" : "true");
+        this->draw_tv_();
+        return;
+      } else {
+        for (uint8_t i = 0; i < TV_SOURCE_COUNT; i++) {
+          if (sources[i].contains(x, y) && !this->tv_sources_[i].empty()) {
+            this->state_[K_MEDIA_SOURCE] = this->tv_sources_[i];
+            this->call_("media_player.select_source", media, "source", this->tv_sources_[i]);
+            this->draw_tv_();
+            return;
+          }
+        }
+      }
+      if (hit != nullptr)
+        this->flash_(hit->x, hit->y, hit->w, hit->h, PIC_WOHNUNG_B, 250);
       return;
+    }
 
     default:
       return;
@@ -1123,16 +1169,12 @@ void NSPanelUI::loop() {
     }
   }
 
-  // hold actions (door, unlock, arm)
+  // hold actions (unlock, arm)
   if (this->pressing_ && this->hold_ != HOLD_NONE && !this->hold_done_) {
     const float f = static_cast<float>(now - this->press_ms_) / HOLD_MS;
     if (f >= 1.0f) {
       this->hold_done_ = true;
       switch (this->hold_) {
-        case HOLD_DOOR:
-          this->call_("script.turn_on", this->roles_[R_DOOR_SCRIPT]);
-          this->door_active_until_ms_ = now + 4000;
-          break;
         case HOLD_UNLOCK:
           this->call_("lock.unlock", this->roles_[R_LOCK]);
           break;
@@ -1145,23 +1187,15 @@ void NSPanelUI::loop() {
       this->draw_flat_();
     } else if (now - this->hold_draw_ms_ >= 60) {
       this->hold_draw_ms_ = now;
-      Rect r = F_WOHNUNG_FLAT_DOOR_PROGRESS.r;
-      uint16_t color = F_WOHNUNG_FLAT_DOOR_PROGRESS.color;
-      if (this->hold_ == HOLD_UNLOCK) {
-        r = LOCK_PROGRESS;
-        color = C_GREEN;
-      } else if (this->hold_ == HOLD_ARM) {
+      Rect r = LOCK_PROGRESS;
+      uint16_t color = C_GREEN;
+      if (this->hold_ == HOLD_ARM) {
         r = F_WOHNUNG_FLAT_ALARM_PROGRESS.r;
         color = F_WOHNUNG_FLAT_ALARM_PROGRESS.color;
       }
       this->fill_(r.x, r.y, static_cast<int16_t>(r.w * f), r.h, color);
     }
   }
-  if (this->door_active_until_ms_ != 0 && now > this->door_active_until_ms_) {
-    this->door_active_until_ms_ = 0;
-    this->mark_(G_FLAT);
-  }
-
   // end of a tap highlight
   if (this->flash_active_ && now > this->flash_until_ms_) {
     this->flash_active_ = false;
@@ -1172,6 +1206,8 @@ void NSPanelUI::loop() {
         this->crop_(this->flash_x_, this->flash_y_, this->flash_w_, this->flash_h_, PIC_SZENEN);
       } else if (this->page_ == PAGE_MEDIEN) {
         this->mark_(G_MEDIA_SIDE);
+      } else if (this->page_ == PAGE_WOHNUNG) {
+        this->draw_tv_();
       }
     }
   }

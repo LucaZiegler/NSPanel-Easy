@@ -27,6 +27,7 @@ enum Page : uint8_t {
 constexpr uint8_t LIGHT_COUNT = 12;  ///< 6 per light page
 constexpr uint8_t SCENE_COUNT = 6;   ///< tiles on the scenes page
 constexpr uint8_t QUICK_COUNT = 3;   ///< quick scenes on the home page (4th button = all lights off)
+constexpr uint8_t TV_SOURCE_COUNT = 3;  ///< source buttons on the TV card of the flat page
 
 /// Home Assistant values pushed in from `homeassistant` text sensors (see custom/nspanel_custom.yaml).
 enum Key : uint8_t {
@@ -51,6 +52,7 @@ enum Key : uint8_t {
   K_MEDIA_SOURCE,
   K_MEDIA_VOLUME,
   K_MEDIA_OUTPUT,
+  K_MEDIA_MUTED,
   K_LOCK,
   K_ALARM,
   K_COUNT,
@@ -62,7 +64,6 @@ enum Role : uint8_t {
   R_MEDIA,
   R_LOCK,
   R_ALARM,
-  R_DOOR_SCRIPT,
   R_TV_ON_SCRIPT,
   R_SCREEN_OFF_SCRIPT,
   R_OUT_DENON_SCRIPT,
@@ -90,6 +91,7 @@ class NSPanelUI : public Component {
   void set_scene(uint8_t index, const std::string &entity) { this->scenes_[index] = entity; }
   void set_quick(uint8_t index, const std::string &entity) { this->quick_[index] = entity; }
   void set_role(uint8_t role, const std::string &entity) { this->roles_[role] = entity; }
+  void set_tv_source(uint8_t index, const std::string &source) { this->tv_sources_[index] = source; }
   void set_screensaver_timeout(uint32_t ms) { this->screensaver_timeout_ms_ = ms; }
   void set_action_handler(ActionHandler handler) { this->action_ = std::move(handler); }
   void set_event_handler(EventHandler handler) { this->event_ = std::move(handler); }
@@ -116,7 +118,7 @@ class NSPanelUI : public Component {
   void pause(bool paused) { this->paused_ = paused; }
 
  protected:
-  enum Hold : uint8_t { HOLD_NONE = 0, HOLD_DOOR, HOLD_UNLOCK, HOLD_ARM };
+  enum Hold : uint8_t { HOLD_NONE = 0, HOLD_UNLOCK, HOLD_ARM };
 
   // drawing primitives
   void pic_(uint8_t pic);
@@ -146,6 +148,7 @@ class NSPanelUI : public Component {
   void draw_media_volume_();
   void draw_media_side_();
   void draw_flat_();
+  void draw_tv_();
   void draw_screensaver_();
   void draw_modal_();
 
@@ -180,6 +183,7 @@ class NSPanelUI : public Component {
   std::array<std::string, SCENE_COUNT> scenes_;
   std::array<std::string, QUICK_COUNT> quick_;
   std::array<std::string, R_COUNT> roles_;
+  std::array<std::string, TV_SOURCE_COUNT> tv_sources_;
   std::array<std::string, K_COUNT> state_;
 
   bool ready_{false};
@@ -210,7 +214,6 @@ class NSPanelUI : public Component {
   Hold hold_{HOLD_NONE};
   bool hold_done_{false};
   uint32_t hold_draw_ms_{0};
-  uint32_t door_active_until_ms_{0};
 
   // flashes (short highlight after a tap)
   bool flash_active_{false};

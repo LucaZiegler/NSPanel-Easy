@@ -10,12 +10,12 @@ Aktionen ausführen.
 | --- | --- |
 | Tippen | Licht an/aus, Szene, Preset, Medien-Taste, Navigation unten |
 | Wischen links/rechts | nächste/vorige Seite (Licht → Licht 2 → Szenen → Bad …) |
-| 2 s halten | Haustür öffnen, Wohnungstür aufschließen, Alarm schärfen (Fortschrittsbalken) |
+| 2 s halten | Wohnungstür aufschließen, Alarm schärfen (Fortschrittsbalken) |
 | Tippen auf die Punkte oben | nächste Licht-Seite |
 | Erstes Tippen im Bildschirmschoner | nur aufwecken |
 
 Seiten: **Start** (Uhr, Wetter, Bad, Schnell-Szenen) · **Licht** (2 Seiten + Szenen) · **Bad** (Thermostat, Fenster,
-Presets) · **Medien** (LG-TV) · **Wohnung** (Schloss, Haustür, Alarm, Fenster).
+Presets) · **Medien** (LG-TV) · **Wohnung** (Schloss, TV-Schnellwahl: Lautstärke, Stumm, Netflix/Live TV/HDMI 2, Alarm, Fenster).
 
 Nach 30 s ohne Berührung erscheint der Bildschirmschoner (Uhr, Datum, Wetter, Bad-Werte).
 
@@ -23,6 +23,8 @@ Nach 30 s ohne Berührung erscheint der Bildschirmschoner (Uhr, Datum, Wetter, B
 
 Entitäten des Panels: `number.nspanel_display_brightness`, `number.nspanel_screensaver_brightness`,
 `button.nspanel_update_tft`, `button.nspanel_restart`, Relais, Temperatur.
+
+TV-Quellen der Wohnung-Seite: `tv_source_1..3` in den `substitutions` (Namen wie in der Quellenliste des TVs).
 
 Die API-Aktionen der alten Firmware bleiben gleich, bestehende Automationen funktionieren weiter:
 `esphome.nspanel_notify_fullscreen`, `_notify_on_screensaver`, `_wake`, `_dim_0_to_100`, `_play_rtttl`,

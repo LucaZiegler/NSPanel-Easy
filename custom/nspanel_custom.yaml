@@ -31,6 +31,9 @@ substitutions:
   scene_4: scene.bad_hell
   scene_5: scene.bad_abends
   scene_6: scene.schlafzimmer_schlafen
+  tv_source_1: "Netflix"
+  tv_source_2: "Live TV"
+  tv_source_3: "HDMI 2"
   climate: climate.bad
   window_top: binary_sensor.kontakt_bad_fenster_oben
   window_bottom: binary_sensor.kontakt_bad_fenster_unten
@@ -38,7 +41,6 @@ substitutions:
   media_player: media_player.lg_webos_tv_oled55cx9la
   lock: lock.zuhause
   alarm: alarm_control_panel.alarmo
-  door_script: script.tur_offnen
   tv_on_script: script.lg_turn_on
   screen_off_script: script.lg_screen_off
   out_denon_script: script.lg_audio_ouput
@@ -69,6 +71,10 @@ esphome:
                 id(ui_action_hvac)->execute(entity, value);
               } else if (key == "volume_level") {
                 id(ui_action_volume)->execute(entity, parse_number<float>(value).value_or(0.2f));
+              } else if (key == "is_volume_muted") {
+                id(ui_action_mute)->execute(entity, value == "true");
+              } else if (key == "source") {
+                id(ui_action_source)->execute(entity, value);
               } else {
                 ESP_LOGW("nspanel_ui", "Unhandled action data key %s", key.c_str());
               }
@@ -126,6 +132,10 @@ nspanel_ui:
     - ${scene_4}
     - ${scene_5}
     - ${scene_6}
+  tv_sources:
+    - ${tv_source_1}
+    - ${tv_source_2}
+    - ${tv_source_3}
   quick_scenes:
     - ${scene_1}
     - ${scene_2}
@@ -134,7 +144,6 @@ nspanel_ui:
   media_player: ${media_player}
   lock: ${lock}
   alarm: ${alarm}
-  door_script: ${door_script}
   tv_on_script: ${tv_on_script}
   screen_off_script: ${screen_off_script}
   out_denon_script: ${out_denon_script}
@@ -200,6 +209,30 @@ script:
           data:
             entity_id: !lambda return entity;
             volume_level: !lambda return value;
+  - id: ui_action_mute
+    mode: queued
+    max_runs: 20
+    parameters:
+      entity: string
+      value: bool
+    then:
+      - homeassistant.action:
+          action: media_player.volume_mute
+          data:
+            entity_id: !lambda return entity;
+            is_volume_muted: !lambda return value;
+  - id: ui_action_source
+    mode: queued
+    max_runs: 20
+    parameters:
+      entity: string
+      value: string
+    then:
+      - homeassistant.action:
+          action: media_player.select_source
+          data:
+            entity_id: !lambda return entity;
+            source: !lambda return value;
   - id: ui_event
     mode: queued
     parameters:
@@ -499,12 +532,19 @@ text_sensor:
       - lambda: id(ui).set_state(nspanel_ui::K_MEDIA_OUTPUT, x);
   - platform: homeassistant
     id: ha_43
+    entity_id: ${media_player}
+    attribute: is_volume_muted
+    internal: true
+    on_value:
+      - lambda: id(ui).set_state(nspanel_ui::K_MEDIA_MUTED, x);
+  - platform: homeassistant
+    id: ha_44
     entity_id: ${lock}
     internal: true
     on_value:
       - lambda: id(ui).set_state(nspanel_ui::K_LOCK, x);
   - platform: homeassistant
-    id: ha_44
+    id: ha_45
     entity_id: ${alarm}
     internal: true
     on_value:
@@ -589,7 +629,7 @@ api:
 
 number:
   - platform: template
-    name: ${device_name} Display Brightness
+    name: Display Brightness
     id: display_brightness
     entity_category: config
     min_value: 10
@@ -602,7 +642,7 @@ number:
     on_value:
       - lambda: id(ui).set_active_brightness(static_cast<int>(x));
   - platform: template
-    name: ${device_name} Screensaver Brightness
+    name: Screensaver Brightness
     id: screensaver_brightness
     entity_category: config
     min_value: 0
@@ -617,14 +657,14 @@ number:
 
 button:
   - platform: template
-    name: ${device_name} Update TFT
+    name: Update TFT
     entity_category: config
     on_press:
       - lambda: |-
           id(ui).pause(true);
           id(disp).upload_tft();
   - platform: restart
-    name: ${device_name} Restart
+    name: Restart
     entity_category: config
 
 binary_sensor:

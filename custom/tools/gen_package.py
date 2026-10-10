@@ -10,6 +10,7 @@ LIGHTS = ["light.wohnzimmer", "light.kuche", "light.esszimmer", "light.bad", "li
           "light.0xbc33acfffe9b49ac"]
 SCENES = ["scene.kuche_wohnzimmer_normal", "scene.kuche_wohnzimmer_gemutlich", "scene.kuche_wohnzimmer_tv",
           "scene.bad_hell", "scene.bad_abends", "scene.schlafzimmer_schlafen"]
+TV_SOURCES = ["Netflix", "Live TV", "HDMI 2"]
 DEFAULTS = {
     "climate": "climate.bad",
     "window_top": "binary_sensor.kontakt_bad_fenster_oben",
@@ -18,7 +19,6 @@ DEFAULTS = {
     "media_player": "media_player.lg_webos_tv_oled55cx9la",
     "lock": "lock.zuhause",
     "alarm": "alarm_control_panel.alarmo",
-    "door_script": "script.tur_offnen",
     "tv_on_script": "script.lg_turn_on",
     "screen_off_script": "script.lg_screen_off",
     "out_denon_script": "script.lg_audio_ouput",
@@ -50,6 +50,7 @@ SENSORS += [
     ("nspanel_ui::K_MEDIA_SOURCE", "media_player", "source"),
     ("nspanel_ui::K_MEDIA_VOLUME", "media_player", "volume_level"),
     ("nspanel_ui::K_MEDIA_OUTPUT", "media_player", "sound_output"),
+    ("nspanel_ui::K_MEDIA_MUTED", "media_player", "is_volume_muted"),
     ("nspanel_ui::K_LOCK", "lock", None),
     ("nspanel_ui::K_ALARM", "alarm", None),
 ]
@@ -77,6 +78,8 @@ def main() -> None:
         a(f"  light_{i + 1}: {e}")
     for i, e in enumerate(SCENES):
         a(f"  scene_{i + 1}: {e}")
+    for i, s in enumerate(TV_SOURCES):
+        a(f'  tv_source_{i + 1}: "{s}"')
     for k, v in DEFAULTS.items():
         a(f"  {k}: {v}")
     a("")
@@ -105,6 +108,10 @@ def main() -> None:
     a("                id(ui_action_hvac)->execute(entity, value);")
     a('              } else if (key == "volume_level") {')
     a("                id(ui_action_volume)->execute(entity, parse_number<float>(value).value_or(0.2f));")
+    a('              } else if (key == "is_volume_muted") {')
+    a('                id(ui_action_mute)->execute(entity, value == "true");')
+    a('              } else if (key == "source") {')
+    a("                id(ui_action_source)->execute(entity, value);")
     a("              } else {")
     a('                ESP_LOGW("nspanel_ui", "Unhandled action data key %s", key.c_str());')
     a("              }")
@@ -148,6 +155,9 @@ def main() -> None:
     a("  scenes:")
     for i in range(6):
         a(f"    - ${{scene_{i + 1}}}")
+    a("  tv_sources:")
+    for i in range(3):
+        a(f"    - ${{tv_source_{i + 1}}}")
     a("  quick_scenes:")
     for i in range(3):
         a(f"    - ${{scene_{i + 1}}}")
@@ -163,6 +173,8 @@ def main() -> None:
         ("ui_action_preset", "entity: string\n      value: string", "climate.set_preset_mode", ("preset_mode", "value")),
         ("ui_action_hvac", "entity: string\n      value: string", "climate.set_hvac_mode", ("hvac_mode", "value")),
         ("ui_action_volume", "entity: string\n      value: float", "media_player.volume_set", ("volume_level", "value")),
+        ("ui_action_mute", "entity: string\n      value: bool", "media_player.volume_mute", ("is_volume_muted", "value")),
+        ("ui_action_source", "entity: string\n      value: string", "media_player.select_source", ("source", "value")),
     ]
     for sid, params, action, extra in scripts:
         a(f"  - id: {sid}")
@@ -284,7 +296,7 @@ API_AND_HARDWARE = r"""api:
 
 number:
   - platform: template
-    name: ${device_name} Display Brightness
+    name: Display Brightness
     id: display_brightness
     entity_category: config
     min_value: 10
@@ -297,7 +309,7 @@ number:
     on_value:
       - lambda: id(ui).set_active_brightness(static_cast<int>(x));
   - platform: template
-    name: ${device_name} Screensaver Brightness
+    name: Screensaver Brightness
     id: screensaver_brightness
     entity_category: config
     min_value: 0
@@ -312,14 +324,14 @@ number:
 
 button:
   - platform: template
-    name: ${device_name} Update TFT
+    name: Update TFT
     entity_category: config
     on_press:
       - lambda: |-
           id(ui).pause(true);
           id(disp).upload_tft();
   - platform: restart
-    name: ${device_name} Restart
+    name: Restart
     entity_category: config
 
 binary_sensor:
