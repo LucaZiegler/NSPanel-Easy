@@ -229,7 +229,7 @@ API_AND_HARDWARE = r"""api:
             const std::string u = url.str();
             id(ui).pause(true);
             if (!u.empty()) id(disp).set_tft_url(u);
-            id(disp).upload_tft();
+            id(disp).upload_tft(921600);  // transfer at 921600 baud, ~8x faster than the runtime baud
     - action: play_rtttl
       variables:
         song_str: string
@@ -329,7 +329,7 @@ button:
     on_press:
       - lambda: |-
           id(ui).pause(true);
-          id(disp).upload_tft();
+          id(disp).upload_tft(921600);  // transfer at 921600 baud, ~8x faster than the runtime baud
   - platform: restart
     name: Restart
     entity_category: config
