@@ -829,10 +829,14 @@ void NSPanelUI::activity_() {
 void NSPanelUI::on_touch(uint8_t half_x, uint8_t half_y, bool pressed) {
   if (!this->ready_ || this->paused_)
     return;
+  // With "Send Component ID" enabled on the Nextion page, the display sends its own touch event for
+  // the page (page 0, component 0) in addition to the coordinate event from the page code. Drop it.
+  if (half_x == 0 && half_y == 0)
+    return;
   const int16_t x = half_x * 2;
   const int16_t y = half_y * 2;
   const uint32_t now = millis();
-  // The display reports every touch event twice within a few milliseconds: drop the repeat.
+  // Safety net against a repeated report of the same event.
   if (pressed == this->last_touch_pressed_ && now - this->last_touch_ms_ < TOUCH_REPEAT_MS) {
     ESP_LOGV(TAG, "Touch repeat ignored (%d,%d %s)", x, y, pressed ? "press" : "release");
     return;
