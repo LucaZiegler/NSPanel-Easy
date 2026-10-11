@@ -14,7 +14,7 @@ Basis: Fork von NSPanel Easy. Eigene Firmware unter `custom/` und `components/ns
 - **Sichtbarer Bereich:** EU-Modell zeigt nur x = 0…449 (rechte 30 px verdeckt).
 - **Kompatibilität:** gleiche Gerätenamen, Entitäten und API-Aktionen wie bisher
   (`esphome.nspanel_notify_fullscreen`, `_wake`, `_dim_0_to_100`, `_play_rtttl`, `_notify_on_screensaver`, …),
-  MQTT bleibt (Taste rechts → `switch.nspanel_nspanel_relay_2` löst „On all off“ aus).
+  MQTT entfällt („On all off“ hört jetzt auf `switch.nspanel_relay_2` aus der ESPHome-API).
 
 ## Schritte
 
